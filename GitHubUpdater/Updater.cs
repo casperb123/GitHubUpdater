@@ -87,11 +87,6 @@ namespace GitHubUpdater
             if (!Directory.Exists(appDataPath))
                 Directory.CreateDirectory(appDataPath);
 
-            if (File.Exists(backupFilePath))
-                File.Delete(backupFilePath);
-            if (File.Exists(changelogFilePath))
-                File.Delete(changelogFilePath);
-
             currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString());
         }
 
@@ -238,6 +233,14 @@ namespace GitHubUpdater
         {
             Process.Start(originalFilePath);
             Environment.Exit(0);
+        }
+
+        public void DeleteUpdateFiles()
+        {
+            if (File.Exists(downloadPath))
+                File.Delete(downloadPath);
+            if (File.Exists(changelogFilePath))
+                File.Delete(changelogFilePath);
         }
 
         public void Rollback()
