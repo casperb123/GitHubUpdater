@@ -223,8 +223,6 @@ namespace GitHubUpdater
             }
 
             State = UpdaterState.Idle;
-            DeleteUpdateFiles();
-
             InstallationCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion));
         }
 
