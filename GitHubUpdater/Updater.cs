@@ -84,9 +84,6 @@ namespace GitHubUpdater
             downloadPath = $"{appDataFilePath}.update";
             changelogFilePath = $"{appDataFilePath}.changelog";
 
-            if (!Directory.Exists(appDataPath))
-                Directory.CreateDirectory(appDataPath);
-
             currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString());
         }
 
@@ -226,6 +223,8 @@ namespace GitHubUpdater
             }
 
             State = UpdaterState.Idle;
+            DeleteUpdateFiles();
+
             InstallationCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion));
         }
 
@@ -241,6 +240,8 @@ namespace GitHubUpdater
                 File.Delete(downloadPath);
             if (File.Exists(changelogFilePath))
                 File.Delete(changelogFilePath);
+            if (File.Exists(backupFilePath))
+                File.Delete(backupFilePath);
         }
 
         public void Rollback()
