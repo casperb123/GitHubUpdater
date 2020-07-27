@@ -2,10 +2,29 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Authors>Casper Bastholm</Authors>
+    <Product>GitHub Updater</Product>
+    <Description>An updater for GitHub that only works with single .exe files.
+
+Release tag needs to be in the following format: v(Major).(Minor).(Build).(Revision). The v at the start of the tag is optional.</Description>
+    <PackageProjectUrl>https://github.com/casperb123/GitHubUpdater</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/casperb123/GitHubUpdater</RepositoryUrl>
+    <RepositoryType>Open source</RepositoryType>
+    <NeutralLanguage>en-DK</NeutralLanguage>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageTags>GitHub, Updater</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Octokit" Version="0.48.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
