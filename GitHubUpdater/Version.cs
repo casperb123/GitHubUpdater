@@ -1,40 +1,87 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace GitHubUpdater
 {
     public class Version : IEquatable<Version>
     {
+        /// <summary>
+        /// If it's the current version
+        /// </summary>
+        public bool IsCurrentVersion { get; private set; }
+        /// <summary>
+        /// The major part of the version
+        /// </summary>
         public int Major { get; private set; }
+        /// <summary>
+        /// The minor part of the version
+        /// </summary>
         public int Minor { get; private set; }
+        /// <summary>
+        /// The build part of the version
+        /// </summary>
         public int Build { get; private set; }
+        /// <summary>
+        /// The revision part of the version
+        /// </summary>
         public int Revision { get; private set; }
 
-        public Version(int major)
+        /// <summary>
+        /// Creates a new version
+        /// </summary>
+        /// <param name="major">The major part of the version</param>
+        /// <param name="isCurrentVersion">If it's the current version</param>
+        public Version(int major, bool isCurrentVersion = false)
         {
             Major = major;
+            IsCurrentVersion = isCurrentVersion;
         }
 
-        public Version(int major, int minor) : this(major)
+        /// <summary>
+        /// Creates a new version
+        /// </summary>
+        /// <param name="major">The major part of the version</param>
+        /// <param name="minor">The minor part of the version</param>
+        /// <param name="isCurrentVersion">If it's the current version</param>
+        public Version(int major, int minor, bool isCurrentVersion = false) : this(major, isCurrentVersion)
         {
             Minor = minor;
         }
 
-        public Version(int major, int minor, int build) : this(major, minor)
+        /// <summary>
+        /// Creates a new version
+        /// </summary>
+        /// <param name="major">The major part of the version</param>
+        /// <param name="minor">The minor part of the version</param>
+        /// <param name="build">The build part of the version</param>
+        /// <param name="isCurrentVersion">If it's the current version</param>
+        public Version(int major, int minor, int build, bool isCurrentVersion = false) : this(major, minor, isCurrentVersion)
         {
             Build = build;
         }
 
-        public Version(int major, int minor, int build, int revision) : this(major, minor, build)
+        /// <summary>
+        /// Creates a new version
+        /// </summary>
+        /// <param name="major">The major part of the version</param>
+        /// <param name="minor">The minor part of the version</param>
+        /// <param name="build">The build part of the version</param>
+        /// <param name="revision">The revision part of the version</param>
+        /// <param name="isCurrentVersion">If it's the current version</param>
+        public Version(int major, int minor, int build, int revision, bool isCurrentVersion = false) : this(major, minor, build, isCurrentVersion)
         {
             Revision = revision;
         }
 
+        /// <summary>
+        /// Checks if the first version is newer than the second version
+        /// </summary>
+        /// <param name="first">The first version to check</param>
+        /// <param name="second">The second version to check</param>
+        /// <returns>true if the first version is newer than the seconds version, false otherwise</returns>
         public static bool operator >(Version first, Version second)
         {
             if (first.Major > second.Major)
@@ -49,6 +96,12 @@ namespace GitHubUpdater
             return false;
         }
 
+        /// <summary>
+        /// Checks if the first version is older than the second version
+        /// </summary>
+        /// <param name="first">The first version to check</param>
+        /// <param name="second">The second version to check</param>
+        /// <returns>true if the first version is older than the second version, false otherwise</returns>
         public static bool operator <(Version first, Version second)
         {
             if (first.Major < second.Major)
@@ -63,6 +116,12 @@ namespace GitHubUpdater
             return false;
         }
 
+        /// <summary>
+        /// Checks if the first and second version is the same
+        /// </summary>
+        /// <param name="first">The first version to check</param>
+        /// <param name="second">The second version to check</param>
+        /// <returns>true if the first and second version is the same, false otherwise</returns>
         public static bool operator ==(Version first, Version second)
         {
             if (first.Major == second.Major &&
@@ -74,6 +133,12 @@ namespace GitHubUpdater
             return false;
         }
 
+        /// <summary>
+        /// Checks if the first and second version isn't the same
+        /// </summary>
+        /// <param name="first">The first version to check</param>
+        /// <param name="second">The second version to check</param>
+        /// <returns>true if the first and second version isn't the same, false otherwise</returns>
         public static bool operator !=(Version first, Version second)
         {
             if (first.Major != second.Major &&
@@ -85,6 +150,10 @@ namespace GitHubUpdater
             return false;
         }
 
+        /// <summary>
+        /// Gets the version string
+        /// </summary>
+        /// <returns>The version string</returns>
         public override string ToString()
         {
             string versionTxt = $"{Major}.{Minor}";
@@ -99,7 +168,13 @@ namespace GitHubUpdater
             return versionTxt;
         }
 
-        public static Version ConvertToVersion(string version)
+        /// <summary>
+        /// Converts a string to a version
+        /// </summary>
+        /// <param name="version">The version string to convert</param>
+        /// <param name="isCurrentVersion">If it's the current version</param>
+        /// <returns>The converted string version</returns>
+        public static Version ConvertToVersion(string version, bool isCurrentVersion = false)
         {
             version = version.Replace("v", "", true, CultureInfo.InvariantCulture).Split("-")[0];
 
@@ -110,23 +185,33 @@ namespace GitHubUpdater
                 var splitted = version.Split('.').Select(int.Parse).ToArray();
 
                 if (splitted.Length == 1)
-                    return new Version(splitted[0]);
+                    return new Version(splitted[0], isCurrentVersion);
                 else if (splitted.Length == 2)
-                    return new Version(splitted[0], splitted[1]);
+                    return new Version(splitted[0], splitted[1], isCurrentVersion);
                 else if (splitted.Length == 3)
-                    return new Version(splitted[0], splitted[1], splitted[2]);
+                    return new Version(splitted[0], splitted[1], splitted[2], isCurrentVersion);
                 else if (splitted.Length >= 4)
-                    return new Version(splitted[0], splitted[1], splitted[2], splitted[3]);
+                    return new Version(splitted[0], splitted[1], splitted[2], splitted[3], isCurrentVersion);
             }
 
             throw new FormatException("Version was in a invalid format");
         }
 
+        /// <summary>
+        /// Checks if the object is the same version
+        /// </summary>
+        /// <param name="obj">The object to check</param>
+        /// <returns>true if the object is the same version, false otherwise</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as Version);
         }
 
+        /// <summary>
+        /// Checks if the version is the same
+        /// </summary>
+        /// <param name="other">The version to check</param>
+        /// <returns>true if the version is the same, false otherwise</returns>
         public bool Equals([AllowNull] Version other)
         {
             return other != null &&
@@ -136,6 +221,10 @@ namespace GitHubUpdater
                    Revision == other.Revision;
         }
 
+        /// <summary>
+        /// Gets the hashcode for the version
+        /// </summary>
+        /// <returns>The hashcode for the version</returns>
         public override int GetHashCode()
         {
             return HashCode.Combine(Major, Minor, Build, Revision);

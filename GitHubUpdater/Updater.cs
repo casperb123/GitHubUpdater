@@ -12,12 +12,33 @@ namespace GitHubUpdater
 {
     public class Updater : IDisposable
     {
+        /// <summary>
+        /// Fires if an update is available
+        /// </summary>
         public event EventHandler<VersionEventArgs> UpdateAvailable;
+        /// <summary>
+        /// Fires when an update starts downloading
+        /// </summary>
         public event EventHandler<DownloadStartedEventArgs> DownloadingStarted;
+        /// <summary>
+        /// Fires when an update has progressed
+        /// </summary>
         public event EventHandler<DownloadProgressEventArgs> DownloadingProgressed;
+        /// <summary>
+        /// Fires when an update has completed downloading
+        /// </summary>
         public event EventHandler<VersionEventArgs> DownloadingCompleted;
+        /// <summary>
+        /// Fires when an update started installing
+        /// </summary>
         public event EventHandler InstallationStarted;
+        /// <summary>
+        /// Fires if an update failed installing
+        /// </summary>
         public event EventHandler<ExceptionEventArgs<Exception>> InstallationFailed;
+        /// <summary>
+        /// Fires when an update has finished installing
+        /// </summary>
         public event EventHandler<VersionEventArgs> InstallationCompleted;
 
         private string gitHubUsername;
@@ -34,6 +55,9 @@ namespace GitHubUpdater
         private string changelog;
         private DateTime updateStartTime;
 
+        /// <summary>
+        /// The GitHub repository name
+        /// </summary>
         public string GitHubRepositoryName
         {
             get { return gitHubRepositoryName; }
@@ -46,6 +70,9 @@ namespace GitHubUpdater
             }
         }
 
+        /// <summary>
+        /// The GitHub username
+        /// </summary>
         public string GitHubUsername
         {
             get { return gitHubUsername; }
@@ -58,8 +85,16 @@ namespace GitHubUpdater
             }
         }
 
+        /// <summary>
+        /// The current state of the updater
+        /// </summary>
         public UpdaterState State { get; private set; }
 
+        /// <summary>
+        /// Initializes a new instance of the updater
+        /// </summary>
+        /// <param name="gitHubUsername">The GitHub username</param>
+        /// <param name="gitHubRepositoryName">The GitHub repository name</param>
         public Updater(string gitHubUsername, string gitHubRepositoryName)
         {
             GitHubUsername = gitHubUsername;
@@ -84,9 +119,15 @@ namespace GitHubUpdater
             downloadPath = $"{appDataFilePath}.update";
             changelogFilePath = $"{appDataFilePath}.changelog";
 
-            currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString());
+            currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString(), true);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the updater with rollback on fail
+        /// </summary>
+        /// <param name="gitHubUsername">The GitHub username</param>
+        /// <param name="gitHubRepositoryName">The GitHub repository name</param>
+        /// <param name="rollBackOnFail">If rollback on fail should be enabled</param>
         public Updater(string gitHubUsername, string gitHubRepositoryName, bool rollBackOnFail) : this(gitHubUsername, gitHubRepositoryName)
         {
             if (rollBackOnFail)
@@ -134,10 +175,14 @@ namespace GitHubUpdater
             DownloadingCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, changelog));
         }
 
-        public async Task<(bool updateAvailable, Version latestVersion)> CheckForUpdatesAsync()
+        /// <summary>
+        /// Checks if an update is available
+        /// </summary>
+        /// <returns>The latest or current version</returns>
+        public async Task<Version> CheckForUpdatesAsync()
         {
             State = UpdaterState.CheckingForUpdates;
-            Release release = null;
+            Release latestRelease = null;
 
             if (File.Exists(downloadPath))
             {
@@ -152,29 +197,40 @@ namespace GitHubUpdater
                         UpdateAvailable?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, true));
 
                     State = UpdaterState.Idle;
-                    return (true, latestVersion);
+                    return latestVersion;
                 }
             }
             else
             {
                 var releases = await gitHubClient.Repository.Release.GetAll(GitHubUsername, GitHubRepositoryName);
-                release = releases[0];
-                latestVersion = Version.ConvertToVersion(release.TagName.Replace("v", ""));
-
-                if (latestVersion > currentVersion)
+                foreach (Release release in releases)
                 {
-                    this.release = release;
-                    changelog = release.Body;
-                    UpdateAvailable?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, release.Body));
-                    State = UpdaterState.Idle;
-                    return (true, latestVersion);
+                    Version version = Version.ConvertToVersion(release.TagName.Replace("v", ""));
+                    if (version > currentVersion)
+                    {
+                        latestVersion = version;
+                        break;
+                    }
                 }
+
+                if (latestRelease is null)
+                    return currentVersion;
+
+                release = latestRelease;
+                changelog = latestRelease.Body;
+                UpdateAvailable?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, latestRelease.Body));
+                State = UpdaterState.Idle;
+                return latestVersion;
             }
 
             State = UpdaterState.Idle;
-            return (false, currentVersion);
+            return currentVersion;
         }
 
+        /// <summary>
+        /// Checks if an update is downloaded
+        /// </summary>
+        /// <returns>true if an update is downloaded, false otherwise</returns>
         public bool IsUpdateDownloaded()
         {
             if (File.Exists(downloadPath))
@@ -183,6 +239,9 @@ namespace GitHubUpdater
             return false;
         }
 
+        /// <summary>
+        /// Begins to download an update if one is available
+        /// </summary>
         public void DownloadUpdate()
         {
             if (release is null)
@@ -203,8 +262,14 @@ namespace GitHubUpdater
             webClient.DownloadFileAsync(new Uri(release.Assets[0].BrowserDownloadUrl), downloadPath);
         }
 
+        /// <summary>
+        /// Installs the downloaded update if it exists
+        /// </summary>
         public void InstallUpdate()
         {
+            if (!File.Exists(downloadPath))
+                throw new FileNotFoundException("There isn't any downloaded update");
+
             State = UpdaterState.Installing;
             InstallationStarted?.Invoke(this, EventArgs.Empty);
 
@@ -226,12 +291,18 @@ namespace GitHubUpdater
             InstallationCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion));
         }
 
+        /// <summary>
+        /// Restarts the application
+        /// </summary>
         public void Restart()
         {
             Process.Start(originalFilePath);
             Environment.Exit(0);
         }
 
+        /// <summary>
+        /// Deletes the update files if they exist
+        /// </summary>
         public void DeleteUpdateFiles()
         {
             if (File.Exists(downloadPath))
@@ -242,7 +313,7 @@ namespace GitHubUpdater
                 File.Delete(backupFilePath);
         }
 
-        public void Rollback()
+        private void Rollback()
         {
             if (File.Exists(backupFilePath))
             {
@@ -254,6 +325,9 @@ namespace GitHubUpdater
                 throw new FileNotFoundException("The backup file was not found");
         }
 
+        /// <summary>
+        /// Disposes the updater
+        /// </summary>
         public void Dispose()
         {
             webClient.Dispose();

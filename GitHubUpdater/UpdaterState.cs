@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace GitHubUpdater
+﻿namespace GitHubUpdater
 {
+    /// <summary>
+    /// The available updater states
+    /// </summary>
     public enum UpdaterState
     {
         Idle,
