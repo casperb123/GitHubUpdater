@@ -95,7 +95,8 @@ namespace GitHubUpdater
         /// </summary>
         /// <param name="gitHubUsername">The GitHub username</param>
         /// <param name="gitHubRepositoryName">The GitHub repository name</param>
-        public Updater(string gitHubUsername, string gitHubRepositoryName)
+        /// <param name="token">The GitHub personal access token</param>
+        public Updater(string gitHubUsername, string gitHubRepositoryName, string token)
         {
             GitHubUsername = gitHubUsername;
             GitHubRepositoryName = gitHubRepositoryName;
@@ -107,7 +108,10 @@ namespace GitHubUpdater
             if (!Directory.Exists(appDataPath))
                 Directory.CreateDirectory(appDataPath);
 
-            gitHubClient = new GitHubClient(new ProductHeaderValue(mainProjectName));
+            gitHubClient = new GitHubClient(new ProductHeaderValue(mainProjectName))
+            {
+                Credentials = new Credentials(token)
+            };
             webClient = new WebClient();
             webClient.DownloadFileCompleted += WebClient_DownloadFileCompleted;
             webClient.DownloadProgressChanged += WebClient_DownloadProgressChanged;
@@ -127,8 +131,9 @@ namespace GitHubUpdater
         /// </summary>
         /// <param name="gitHubUsername">The GitHub username</param>
         /// <param name="gitHubRepositoryName">The GitHub repository name</param>
+        /// <param name="token">The GitHub personal access token</param>
         /// <param name="rollBackOnFail">If rollback on fail should be enabled</param>
-        public Updater(string gitHubUsername, string gitHubRepositoryName, bool rollBackOnFail) : this(gitHubUsername, gitHubRepositoryName)
+        public Updater(string gitHubUsername, string gitHubRepositoryName, string token, bool rollBackOnFail) : this(gitHubUsername, gitHubRepositoryName, token)
         {
             if (rollBackOnFail)
                 InstallationFailed += (s, e) => Rollback();
@@ -209,6 +214,7 @@ namespace GitHubUpdater
                     if (version > currentVersion)
                     {
                         latestVersion = version;
+                        latestRelease = release;
                         break;
                     }
                 }
