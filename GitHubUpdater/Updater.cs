@@ -1,4 +1,5 @@
-﻿using Octokit;
+﻿using Ionic.Zip;
+using Octokit;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -297,8 +298,18 @@ namespace GitHubUpdater
                 if (File.Exists(backupFilePath))
                     File.Delete(backupFilePath);
 
-                File.Move(originalFilePath, backupFilePath);
-                File.Move(downloadPath, originalFilePath);
+                if (ZipFile.IsZipFile(downloadPath) && ZipFile.CheckZip(downloadPath))
+                {
+                    string extractDir = Path.GetDirectoryName(originalFilePath);
+
+                    using (ZipFile zip = ZipFile.Read(downloadPath))
+                        zip.ExtractAll(extractDir, ExtractExistingFileAction.OverwriteSilently);
+                }
+                else
+                {
+                    File.Move(originalFilePath, backupFilePath);
+                    File.Move(downloadPath, originalFilePath);
+                }
             }
             catch (Exception e)
             {
