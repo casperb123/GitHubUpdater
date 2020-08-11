@@ -4,7 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Authors>Casper Bastholm</Authors>
     <Product>GitHub Updater</Product>
-    <Description>An updater for GitHub that only works with .exe and .zip files.
+    <Description>An updater for GitHub that only works with single .exe files.
 
 Release tag needs to be in the following format: v(Major).(Minor).(Build).(Revision). The v at the start of the tag is optional.</Description>
     <PackageProjectUrl>https://github.com/casperb123/GitHubUpdater</PackageProjectUrl>
@@ -14,7 +14,7 @@ Release tag needs to be in the following format: v(Major).(Minor).(Build).(Revis
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageTags>GitHub, Updater</PackageTags>
-    <Version>1.1.1</Version>
+    <Version>1.1.5</Version>
   </PropertyGroup>
 
   <ItemGroup>
