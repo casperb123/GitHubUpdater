@@ -109,13 +109,20 @@ namespace GitHubUpdater
             if (!Directory.Exists(appDataPath))
                 Directory.CreateDirectory(appDataPath);
 
-            gitHubClient = new GitHubClient(new ProductHeaderValue(mainProjectName))
+            try
             {
-                Credentials = new Credentials(token)
-            };
-            webClient = new WebClient();
-            webClient.DownloadFileCompleted += WebClient_DownloadFileCompleted;
-            webClient.DownloadProgressChanged += WebClient_DownloadProgressChanged;
+                gitHubClient = new GitHubClient(new ProductHeaderValue(mainProjectName))
+                {
+                    Credentials = new Credentials(token)
+                };
+                webClient = new WebClient();
+                webClient.DownloadFileCompleted += WebClient_DownloadFileCompleted;
+                webClient.DownloadProgressChanged += WebClient_DownloadProgressChanged;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
 
             originalFilePath = Process.GetCurrentProcess().MainModule.FileName;
             string appDataFilePath = $@"{appDataPath}\{Path.GetFileNameWithoutExtension(originalFilePath)}";
@@ -207,18 +214,25 @@ namespace GitHubUpdater
             }
             else
             {
-                var releases = await gitHubClient.Repository.Release.GetAll(GitHubUsername, GitHubRepositoryName);
-                Release release = releases.FirstOrDefault(x => Version.ConvertToVersion(x.TagName.Replace("v", "")) > currentVersion);
+                try
+                {
+                    var releases = await gitHubClient.Repository.Release.GetAll(GitHubUsername, GitHubRepositoryName);
+                    Release release = releases.FirstOrDefault(x => Version.ConvertToVersion(x.TagName.Replace("v", "")) > currentVersion);
 
-                if (release is null)
-                    return currentVersion;
+                    if (release is null)
+                        return currentVersion;
 
-                latestRelease = release;
-                latestVersion = Version.ConvertToVersion(latestRelease.TagName.Replace("v", ""));
-                changelog = latestRelease.Body;
-                UpdateAvailable?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, latestRelease.Body));
-                State = UpdaterState.Idle;
-                return latestVersion;
+                    latestRelease = release;
+                    latestVersion = Version.ConvertToVersion(latestRelease.TagName.Replace("v", ""));
+                    changelog = latestRelease.Body;
+                    UpdateAvailable?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, latestRelease.Body));
+                    State = UpdaterState.Idle;
+                    return latestVersion;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
             }
 
             State = UpdaterState.Idle;
@@ -253,11 +267,18 @@ namespace GitHubUpdater
             if (File.Exists(downloadPath))
                 File.Delete(downloadPath);
 
-            DownloadingStarted?.Invoke(this, new DownloadStartedEventArgs(latestVersion));
-            State = UpdaterState.Downloading;
+            try
+            {
+                DownloadingStarted?.Invoke(this, new DownloadStartedEventArgs(latestVersion));
+                State = UpdaterState.Downloading;
 
-            updateStartTime = DateTime.Now;
-            webClient.DownloadFileAsync(new Uri(latestRelease.Assets[0].BrowserDownloadUrl), downloadPath);
+                updateStartTime = DateTime.Now;
+                webClient.DownloadFileAsync(new Uri(latestRelease.Assets[0].BrowserDownloadUrl), downloadPath);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -279,9 +300,9 @@ namespace GitHubUpdater
                 File.Move(originalFilePath, backupFilePath);
                 File.Move(downloadPath, originalFilePath);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                InstallationFailed?.Invoke(this, new ExceptionEventArgs<Exception>(ex, ex.Message));
+                InstallationFailed?.Invoke(this, new ExceptionEventArgs<Exception>(e, e.Message));
                 return;
             }
 
