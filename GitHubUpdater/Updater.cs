@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -49,7 +50,7 @@ namespace GitHubUpdater
         private readonly string originalFilePath;
         private readonly string backupFilePath;
         private readonly string changelogFilePath;
-        private Release release;
+        private Release latestRelease;
         private readonly Version currentVersion;
         private Version latestVersion;
         private string changelog;
@@ -158,16 +159,16 @@ namespace GitHubUpdater
             if (timeLeft.Hours > 0)
                 timeLeftString += string.Format("{0} hours", timeLeft.Hours);
             if (timeLeft.Minutes > 0)
-                timeLeftString += timeLeftString == string.Empty ? string.Format("{0} min", timeLeft.Minutes) : string.Format(" {0} min", timeLeft.Minutes);
+                timeLeftString += string.IsNullOrWhiteSpace(timeLeftString) ? string.Format("{0} min", timeLeft.Minutes) : string.Format(" {0} min", timeLeft.Minutes);
             if (timeLeft.Seconds >= 0)
-                timeLeftString += timeLeftString == string.Empty ? string.Format("{0} sec", timeLeft.Seconds) : string.Format(" {0} sec", timeLeft.Seconds);
+                timeLeftString += string.IsNullOrWhiteSpace(timeLeftString) ? string.Format("{0} sec", timeLeft.Seconds) : string.Format(" {0} sec", timeLeft.Seconds);
 
             if (timeSpent.Hours > 0)
                 timeSpentString = string.Format("{0} hours", timeSpent.Hours);
             if (timeSpent.Minutes > 0)
-                timeSpentString += timeSpentString == string.Empty ? string.Format("{0} min", timeSpent.Minutes) : string.Format(" {0} min", timeSpent.Minutes);
+                timeSpentString += string.IsNullOrWhiteSpace(timeSpentString) ? string.Format("{0} min", timeSpent.Minutes) : string.Format(" {0} min", timeSpent.Minutes);
             if (timeSpent.Seconds >= 0)
-                timeSpentString += timeSpentString == string.Empty ? string.Format("{0} sec", timeSpent.Seconds) : string.Format(" {0} sec", timeSpent.Seconds);
+                timeSpentString += string.IsNullOrWhiteSpace(timeSpentString) ? string.Format("{0} sec", timeSpent.Seconds) : string.Format(" {0} sec", timeSpent.Seconds);
 
             DownloadingProgressed?.Invoke(this, new DownloadProgressEventArgs(e.BytesReceived, e.TotalBytesToReceive, e.ProgressPercentage, timeLeftString, timeSpentString, received, toReceive));
         }
@@ -187,7 +188,6 @@ namespace GitHubUpdater
         public async Task<Version> CheckForUpdatesAsync()
         {
             State = UpdaterState.CheckingForUpdates;
-            Release latestRelease = null;
 
             if (File.Exists(downloadPath))
             {
@@ -208,21 +208,13 @@ namespace GitHubUpdater
             else
             {
                 var releases = await gitHubClient.Repository.Release.GetAll(GitHubUsername, GitHubRepositoryName);
-                foreach (Release release in releases)
-                {
-                    Version version = Version.ConvertToVersion(release.TagName.Replace("v", ""));
-                    if (version > currentVersion)
-                    {
-                        latestVersion = version;
-                        latestRelease = release;
-                        break;
-                    }
-                }
+                Release release = releases.FirstOrDefault(x => Version.ConvertToVersion(x.TagName.Replace("v", "")) > currentVersion);
 
-                if (latestRelease is null)
+                if (release is null)
                     return currentVersion;
 
-                release = latestRelease;
+                latestRelease = release;
+                latestVersion = Version.ConvertToVersion(latestRelease.TagName.Replace("v", ""));
                 changelog = latestRelease.Body;
                 UpdateAvailable?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, latestRelease.Body));
                 State = UpdaterState.Idle;
@@ -250,11 +242,11 @@ namespace GitHubUpdater
         /// </summary>
         public void DownloadUpdate()
         {
-            if (release is null)
+            if (latestRelease is null)
                 throw new NullReferenceException("There isn't any update available");
-            if (!release.Assets[0].Name.EndsWith(".exe"))
+            if (!latestRelease.Assets[0].Name.EndsWith(".exe"))
             {
-                string extension = Path.GetExtension(release.Assets[0].Name);
+                string extension = Path.GetExtension(latestRelease.Assets[0].Name);
                 throw new FileLoadException($"The downloaded file is a {extension} file, which is not supported");
             }
 
@@ -265,7 +257,7 @@ namespace GitHubUpdater
             State = UpdaterState.Downloading;
 
             updateStartTime = DateTime.Now;
-            webClient.DownloadFileAsync(new Uri(release.Assets[0].BrowserDownloadUrl), downloadPath);
+            webClient.DownloadFileAsync(new Uri(latestRelease.Assets[0].BrowserDownloadUrl), downloadPath);
         }
 
         /// <summary>
@@ -337,6 +329,7 @@ namespace GitHubUpdater
         public void Dispose()
         {
             webClient.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }
