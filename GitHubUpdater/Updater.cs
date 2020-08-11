@@ -259,7 +259,7 @@ namespace GitHubUpdater
         {
             if (latestRelease is null)
                 throw new NullReferenceException("There isn't any update available");
-            if (!latestRelease.Assets[0].Name.EndsWith(".exe"))
+            if (!latestRelease.Assets[0].Name.EndsWith(".exe") && !ZipFile.IsZipFile(latestRelease.Assets[0].Name))
             {
                 string extension = Path.GetExtension(latestRelease.Assets[0].Name);
                 throw new FileLoadException($"The downloaded file is a {extension} file, which is not supported");
