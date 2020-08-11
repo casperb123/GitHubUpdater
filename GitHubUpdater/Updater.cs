@@ -1,5 +1,4 @@
-﻿using Ionic.Zip;
-using Octokit;
+﻿using Octokit;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -259,7 +258,7 @@ namespace GitHubUpdater
         {
             if (latestRelease is null)
                 throw new NullReferenceException("There isn't any update available");
-            if (!latestRelease.Assets[0].Name.EndsWith(".exe") && !ZipFile.IsZipFile(latestRelease.Assets[0].Name))
+            if (!latestRelease.Assets[0].Name.EndsWith(".exe"))
             {
                 string extension = Path.GetExtension(latestRelease.Assets[0].Name);
                 throw new FileLoadException($"The downloaded file is a {extension} file, which is not supported");
@@ -298,18 +297,8 @@ namespace GitHubUpdater
                 if (File.Exists(backupFilePath))
                     File.Delete(backupFilePath);
 
-                if (ZipFile.IsZipFile(downloadPath) && ZipFile.CheckZip(downloadPath))
-                {
-                    string extractDir = Path.GetDirectoryName(originalFilePath);
-
-                    using (ZipFile zip = ZipFile.Read(downloadPath))
-                        zip.ExtractAll(extractDir, ExtractExistingFileAction.OverwriteSilently);
-                }
-                else
-                {
-                    File.Move(originalFilePath, backupFilePath);
-                    File.Move(downloadPath, originalFilePath);
-                }
+                File.Move(originalFilePath, backupFilePath);
+                File.Move(downloadPath, originalFilePath);
             }
             catch (Exception e)
             {
