@@ -311,7 +311,8 @@ namespace GitHubUpdater
                     StartInfo =
                     {
                         FileName = batFilePath,
-                        Arguments = $"{updatePath} {Path.GetDirectoryName(originalFilePath)} {originalFilePath}"
+                        Arguments = $"{updatePath} {Path.GetDirectoryName(originalFilePath)} {originalFilePath}",
+                        CreateNoWindow = true
                     }
                 };
 

@@ -1,9 +1,7 @@
+@echo off
 cd %1
 
-echo "Installing update..."
-echo
-
-timeout 2 > NUL
+timeout 1 > NUL
 
 for %%f in (*) do (
     move /y %%f %2
