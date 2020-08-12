@@ -1,5 +1,8 @@
-﻿using Octokit;
+﻿using GitHubUpdater.Properties;
+using Ionic.Zip;
+using Octokit;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -47,8 +50,9 @@ namespace GitHubUpdater
         private readonly WebClient webClient;
         private readonly GitHubClient gitHubClient;
         private readonly string downloadPath;
+        private string downloadFilePath;
+        private readonly string updatePath;
         private readonly string originalFilePath;
-        private readonly string backupFilePath;
         private readonly string changelogFilePath;
         private Release latestRelease;
         private readonly Version currentVersion;
@@ -105,9 +109,13 @@ namespace GitHubUpdater
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string mainProjectName = Assembly.GetEntryAssembly().GetName().Name;
             string appDataPath = $@"{appData}\{mainProjectName}";
+            downloadPath = appDataPath;
+            updatePath = $@"{appDataPath}\Update";
 
             if (!Directory.Exists(appDataPath))
                 Directory.CreateDirectory(appDataPath);
+            if (!Directory.Exists(updatePath))
+                Directory.CreateDirectory(updatePath);
 
             try
             {
@@ -125,26 +133,10 @@ namespace GitHubUpdater
             }
 
             originalFilePath = Process.GetCurrentProcess().MainModule.FileName;
-            string appDataFilePath = $@"{appDataPath}\{Path.GetFileNameWithoutExtension(originalFilePath)}";
-
-            backupFilePath = $"{appDataFilePath}.backup";
-            downloadPath = $"{appDataFilePath}.update";
+            string appDataFilePath = $@"{appDataPath}\{Path.GetFileName(originalFilePath)}";
             changelogFilePath = $"{appDataFilePath}.changelog";
 
             currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString(), true);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the updater with rollback on fail
-        /// </summary>
-        /// <param name="gitHubUsername">The GitHub username</param>
-        /// <param name="gitHubRepositoryName">The GitHub repository name</param>
-        /// <param name="token">The GitHub personal access token</param>
-        /// <param name="rollBackOnFail">If rollback on fail should be enabled</param>
-        public Updater(string gitHubUsername, string gitHubRepositoryName, string token, bool rollBackOnFail) : this(gitHubUsername, gitHubRepositoryName, token)
-        {
-            if (rollBackOnFail)
-                InstallationFailed += (s, e) => Rollback();
         }
 
         private void WebClient_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
@@ -183,6 +175,20 @@ namespace GitHubUpdater
         private void WebClient_DownloadFileCompleted(object sender, AsyncCompletedEventArgs e)
         {
             State = UpdaterState.Idle;
+
+            List<string> updateFiles = Directory.GetFiles(updatePath).ToList();
+            updateFiles.ForEach(x => File.Delete(x));
+
+            if (ZipFile.IsZipFile(downloadFilePath) && ZipFile.CheckZip(downloadFilePath))
+            {
+                using (ZipFile zip = new ZipFile(downloadFilePath))
+                    zip.ExtractAll(updatePath);
+            }
+            else
+            {
+                string newFilePath = $@"{updatePath}\{Path.GetFileName(downloadFilePath)}";
+                File.Move(downloadFilePath, newFilePath);
+            }
 
             File.WriteAllText(changelogFilePath, changelog);
             DownloadingCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, changelog));
@@ -258,11 +264,6 @@ namespace GitHubUpdater
         {
             if (latestRelease is null)
                 throw new NullReferenceException("There isn't any update available");
-            if (!latestRelease.Assets[0].Name.EndsWith(".exe"))
-            {
-                string extension = Path.GetExtension(latestRelease.Assets[0].Name);
-                throw new FileLoadException($"The downloaded file is a {extension} file, which is not supported");
-            }
 
             if (File.Exists(downloadPath))
                 File.Delete(downloadPath);
@@ -272,8 +273,12 @@ namespace GitHubUpdater
                 DownloadingStarted?.Invoke(this, new DownloadStartedEventArgs(latestVersion));
                 State = UpdaterState.Downloading;
 
+                string fileUrl = latestRelease.Assets[0].BrowserDownloadUrl;
+                string filePath = $@"{downloadPath}\{Path.GetFileName(fileUrl)}";
+                downloadFilePath = filePath;
+
                 updateStartTime = DateTime.Now;
-                webClient.DownloadFileAsync(new Uri(latestRelease.Assets[0].BrowserDownloadUrl), downloadPath);
+                webClient.DownloadFileAsync(new Uri(fileUrl), filePath);
             }
             catch (Exception)
             {
@@ -294,11 +299,11 @@ namespace GitHubUpdater
 
             try
             {
-                if (File.Exists(backupFilePath))
-                    File.Delete(backupFilePath);
+                string batFilePath = $@"{Path.GetDirectoryName(originalFilePath)}\InstallUpdate.bat";
+                File.WriteAllText(batFilePath, Resources.InstallUpdate);
 
-                File.Move(originalFilePath, backupFilePath);
-                File.Move(downloadPath, originalFilePath);
+                Process.Start("cmd.exe", $"/c {batFilePath} {updatePath} {Path.GetDirectoryName(originalFilePath)} {originalFilePath}");
+                Environment.Exit(0);
             }
             catch (Exception e)
             {
@@ -307,7 +312,36 @@ namespace GitHubUpdater
             }
 
             State = UpdaterState.Idle;
-            InstallationCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion));
+            //InstallationCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion));
+        }
+
+        /// <summary>
+        /// Installs the downloaded update if it exists
+        /// </summary>
+        public async Task InstallUpdateAsync()
+        {
+            if (!File.Exists(downloadPath))
+                throw new FileNotFoundException("There isn't any downloaded update");
+
+            State = UpdaterState.Installing;
+            InstallationStarted?.Invoke(this, EventArgs.Empty);
+
+            try
+            {
+                string batFilePath = $@"{Path.GetDirectoryName(originalFilePath)}\InstallUpdate.bat";
+                await File.WriteAllTextAsync(batFilePath, Resources.InstallUpdate);
+
+                Process.Start("cmd.exe", $"/c {batFilePath} {updatePath} {Path.GetDirectoryName(originalFilePath)} {originalFilePath}");
+                Environment.Exit(0);
+            }
+            catch (Exception e)
+            {
+                InstallationFailed?.Invoke(this, new ExceptionEventArgs<Exception>(e, e.Message));
+                return;
+            }
+
+            State = UpdaterState.Idle;
+            //InstallationCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion));
         }
 
         /// <summary>
@@ -324,24 +358,13 @@ namespace GitHubUpdater
         /// </summary>
         public void DeleteUpdateFiles()
         {
-            if (File.Exists(downloadPath))
-                File.Delete(downloadPath);
+            if (File.Exists(downloadFilePath))
+                File.Delete(downloadFilePath);
             if (File.Exists(changelogFilePath))
                 File.Delete(changelogFilePath);
-            if (File.Exists(backupFilePath))
-                File.Delete(backupFilePath);
-        }
 
-        private void Rollback()
-        {
-            if (File.Exists(backupFilePath))
-            {
-                State = UpdaterState.RollingBack;
-                File.Move(backupFilePath, originalFilePath, true);
-                State = UpdaterState.Idle;
-            }
-            else
-                throw new FileNotFoundException("The backup file was not found");
+            List<string> updateFiles = Directory.GetFiles(updatePath).ToList();
+            updateFiles.ForEach(x => File.Delete(x));
         }
 
         /// <summary>
