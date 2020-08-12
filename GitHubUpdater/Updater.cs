@@ -186,6 +186,9 @@ namespace GitHubUpdater
             {
                 using (ZipFile zip = new ZipFile(downloadFilePath))
                     zip.ExtractAll(updatePath);
+
+                if (File.Exists(downloadFilePath))
+                    File.Delete(downloadFilePath);
             }
             else
             {
@@ -342,8 +345,6 @@ namespace GitHubUpdater
         /// </summary>
         public void DeleteUpdateFiles()
         {
-            if (File.Exists(downloadFilePath))
-                File.Delete(downloadFilePath);
             if (File.Exists(changelogFilePath))
                 File.Delete(changelogFilePath);
             if (File.Exists(versionFilePath))
