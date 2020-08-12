@@ -135,8 +135,9 @@ namespace GitHubUpdater
             }
 
             originalFilePath = Process.GetCurrentProcess().MainModule.FileName;
-            changelogFilePath = $@"{appDataPath}\Changelog";
-            versionFilePath = $@"{appDataPath}\Version";
+            string appDataFilePath = $@"{appDataPath}\{mainProjectName}";
+            changelogFilePath = $"{appDataFilePath}.changelog";
+            versionFilePath = $"{appDataFilePath}.version";
 
             currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString(), true);
         }
