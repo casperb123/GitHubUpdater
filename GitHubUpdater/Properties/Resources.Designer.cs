@@ -63,9 +63,13 @@ namespace GitHubUpdater.Properties {
         /// <summary>
         ///   Looks up a localized string similar to @echo off
         ///cd %1
+        ///
+        ///echo &quot;Installing update...&quot;
+        ///echo
+        ///
         ///timeout 2 &gt; NUL
         ///
-        ///for /r %%f in (*) do (
+        ///for %%f in (*) do (
         ///    move /y %%f %2
         ///)
         ///

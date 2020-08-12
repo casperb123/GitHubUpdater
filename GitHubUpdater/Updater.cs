@@ -40,10 +40,6 @@ namespace GitHubUpdater
         /// Fires if an update failed installing
         /// </summary>
         public event EventHandler<ExceptionEventArgs<Exception>> InstallationFailed;
-        /// <summary>
-        /// Fires when an update has finished installing
-        /// </summary>
-        public event EventHandler<VersionEventArgs> InstallationCompleted;
 
         private string gitHubUsername;
         private string gitHubRepositoryName;
@@ -54,6 +50,8 @@ namespace GitHubUpdater
         private readonly string updatePath;
         private readonly string originalFilePath;
         private readonly string changelogFilePath;
+        private readonly string versionFilePath;
+        private readonly string batFilePath;
         private Release latestRelease;
         private readonly Version currentVersion;
         private Version latestVersion;
@@ -111,11 +109,16 @@ namespace GitHubUpdater
             string appDataPath = $@"{appData}\{mainProjectName}";
             downloadPath = appDataPath;
             updatePath = $@"{appDataPath}\Update";
+            batFilePath = $@"{appDataPath}\InstallUpdate.bat";
+            versionFilePath = $@"{appDataPath}\Version.txt";
 
             if (!Directory.Exists(appDataPath))
                 Directory.CreateDirectory(appDataPath);
             if (!Directory.Exists(updatePath))
                 Directory.CreateDirectory(updatePath);
+
+            if (File.Exists(batFilePath) && File.ReadAllText(batFilePath) != Resources.InstallUpdate || !File.Exists(batFilePath))
+                File.WriteAllText(batFilePath, Resources.InstallUpdate);
 
             try
             {
@@ -133,7 +136,7 @@ namespace GitHubUpdater
             }
 
             originalFilePath = Process.GetCurrentProcess().MainModule.FileName;
-            string appDataFilePath = $@"{appDataPath}\{Path.GetFileName(originalFilePath)}";
+            string appDataFilePath = $@"{appDataPath}\{Path.GetFileNameWithoutExtension(originalFilePath)}";
             changelogFilePath = $"{appDataFilePath}.changelog";
 
             currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString(), true);
@@ -191,6 +194,7 @@ namespace GitHubUpdater
             }
 
             File.WriteAllText(changelogFilePath, changelog);
+            File.WriteAllText(versionFilePath, latestRelease.TagName.Replace("v", ""));
             DownloadingCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, changelog));
         }
 
@@ -201,11 +205,12 @@ namespace GitHubUpdater
         public async Task<Version> CheckForUpdatesAsync()
         {
             State = UpdaterState.CheckingForUpdates;
+            int updateFiles = Directory.GetFiles(updatePath).Length;
 
-            if (File.Exists(downloadPath))
+            if (updateFiles > 0)
             {
-                FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(downloadPath);
-                latestVersion = Version.ConvertToVersion(fileVersionInfo.FileVersion);
+                string versionTxt = await File.ReadAllTextAsync(versionFilePath);
+                latestVersion = Version.ConvertToVersion(versionTxt);
 
                 if (latestVersion > currentVersion)
                 {
@@ -251,7 +256,8 @@ namespace GitHubUpdater
         /// <returns>true if an update is downloaded, false otherwise</returns>
         public bool IsUpdateDownloaded()
         {
-            if (File.Exists(downloadPath))
+            int updateFiles = Directory.GetFiles(updatePath).Length;
+            if (updateFiles > 0)
                 return true;
 
             return false;
@@ -291,7 +297,8 @@ namespace GitHubUpdater
         /// </summary>
         public void InstallUpdate()
         {
-            if (!File.Exists(downloadPath))
+            int updateFiles = Directory.GetFiles(updatePath).Length;
+            if (updateFiles == 0)
                 throw new FileNotFoundException("There isn't any downloaded update");
 
             State = UpdaterState.Installing;
@@ -299,10 +306,17 @@ namespace GitHubUpdater
 
             try
             {
-                string batFilePath = $@"{Path.GetDirectoryName(originalFilePath)}\InstallUpdate.bat";
-                File.WriteAllText(batFilePath, Resources.InstallUpdate);
+                Process process = new Process
+                {
+                    StartInfo =
+                    {
+                        FileName = batFilePath,
+                        Arguments = $"{updatePath} {Path.GetDirectoryName(originalFilePath)} {originalFilePath}",
+                        CreateNoWindow = true
+                    }
+                };
 
-                Process.Start("cmd.exe", $"/c {batFilePath} {updatePath} {Path.GetDirectoryName(originalFilePath)} {originalFilePath}");
+                process.Start();
                 Environment.Exit(0);
             }
             catch (Exception e)
@@ -312,36 +326,6 @@ namespace GitHubUpdater
             }
 
             State = UpdaterState.Idle;
-            //InstallationCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion));
-        }
-
-        /// <summary>
-        /// Installs the downloaded update if it exists
-        /// </summary>
-        public async Task InstallUpdateAsync()
-        {
-            if (!File.Exists(downloadPath))
-                throw new FileNotFoundException("There isn't any downloaded update");
-
-            State = UpdaterState.Installing;
-            InstallationStarted?.Invoke(this, EventArgs.Empty);
-
-            try
-            {
-                string batFilePath = $@"{Path.GetDirectoryName(originalFilePath)}\InstallUpdate.bat";
-                await File.WriteAllTextAsync(batFilePath, Resources.InstallUpdate);
-
-                Process.Start("cmd.exe", $"/c {batFilePath} {updatePath} {Path.GetDirectoryName(originalFilePath)} {originalFilePath}");
-                Environment.Exit(0);
-            }
-            catch (Exception e)
-            {
-                InstallationFailed?.Invoke(this, new ExceptionEventArgs<Exception>(e, e.Message));
-                return;
-            }
-
-            State = UpdaterState.Idle;
-            //InstallationCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion));
         }
 
         /// <summary>
@@ -362,6 +346,8 @@ namespace GitHubUpdater
                 File.Delete(downloadFilePath);
             if (File.Exists(changelogFilePath))
                 File.Delete(changelogFilePath);
+            if (File.Exists(versionFilePath))
+                File.Delete(versionFilePath);
 
             List<string> updateFiles = Directory.GetFiles(updatePath).ToList();
             updateFiles.ForEach(x => File.Delete(x));
