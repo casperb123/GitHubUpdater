@@ -61,8 +61,7 @@ namespace GitHubUpdater.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to @echo off
-        ///cd %1
+        ///   Looks up a localized string similar to cd %1
         ///
         ///echo &quot;Installing update...&quot;
         ///echo

@@ -1,4 +1,3 @@
-@echo off
 cd %1
 
 echo "Installing update..."
