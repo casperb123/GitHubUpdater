@@ -110,7 +110,6 @@ namespace GitHubUpdater
             downloadPath = appDataPath;
             updatePath = $@"{appDataPath}\Update";
             batFilePath = $@"{appDataPath}\InstallUpdate.bat";
-            versionFilePath = $@"{appDataPath}\Version.txt";
 
             if (!Directory.Exists(appDataPath))
                 Directory.CreateDirectory(appDataPath);
@@ -136,8 +135,8 @@ namespace GitHubUpdater
             }
 
             originalFilePath = Process.GetCurrentProcess().MainModule.FileName;
-            string appDataFilePath = $@"{appDataPath}\{Path.GetFileNameWithoutExtension(originalFilePath)}";
-            changelogFilePath = $"{appDataFilePath}.changelog";
+            changelogFilePath = $@"{appDataPath}\Changelog";
+            versionFilePath = $@"{appDataPath}\Version";
 
             currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString(), true);
         }
