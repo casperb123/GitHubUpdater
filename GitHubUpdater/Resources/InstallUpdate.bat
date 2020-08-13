@@ -1,4 +1,4 @@
-tskill %1
+taskkill /f /im %1
 cd %2
 
 timeout 1 > NUL
