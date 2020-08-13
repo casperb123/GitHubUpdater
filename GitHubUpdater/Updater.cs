@@ -116,7 +116,7 @@ namespace GitHubUpdater
             if (!Directory.Exists(updatePath))
                 Directory.CreateDirectory(updatePath);
 
-            if (File.Exists(batFilePath) && File.ReadAllText(batFilePath) != Resources.InstallUpdate || !File.Exists(batFilePath))
+            if (File.Exists(batFilePath) && !string.Equals(File.ReadAllText(batFilePath), Resources.InstallUpdate) || !File.Exists(batFilePath))
                 File.WriteAllText(batFilePath, Resources.InstallUpdate);
 
             try
