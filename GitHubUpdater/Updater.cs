@@ -185,7 +185,7 @@ namespace GitHubUpdater
             if (ZipFile.IsZipFile(downloadFilePath) && ZipFile.CheckZip(downloadFilePath))
             {
                 using (ZipFile zip = new ZipFile(downloadFilePath))
-                    zip.ExtractAll(updatePath);
+                    zip.ExtractAll(updatePath, ExtractExistingFileAction.OverwriteSilently);
 
                 if (File.Exists(downloadFilePath))
                     File.Delete(downloadFilePath);
@@ -210,7 +210,7 @@ namespace GitHubUpdater
             State = UpdaterState.CheckingForUpdates;
             int updateFiles = Directory.GetFiles(updatePath).Length;
 
-            if (updateFiles > 0)
+            if (updateFiles > 0 && File.Exists(versionFilePath))
             {
                 string versionTxt = await File.ReadAllTextAsync(versionFilePath);
                 latestVersion = Version.ConvertToVersion(versionTxt);

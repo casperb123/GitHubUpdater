@@ -61,8 +61,7 @@ namespace GitHubUpdater.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to @echo off
-        ///tskill %1
+        ///   Looks up a localized string similar to tskill %1
         ///cd %2
         ///
         ///timeout 1 &gt; NUL
@@ -70,8 +69,11 @@ namespace GitHubUpdater.Properties {
         ///for %%f in (*) do (
         ///    move /y %%f %3
         ///)
+        ///for /r /d %%d in (*) do (
+        ///    move /y %%d %3
+        ///)
         ///
-        ///start %4.
+        ///start &quot;&quot; %4.
         /// </summary>
         internal static string InstallUpdate {
             get {
