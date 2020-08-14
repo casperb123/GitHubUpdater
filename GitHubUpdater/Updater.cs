@@ -35,7 +35,7 @@ namespace GitHubUpdater
         /// <summary>
         /// Fires when an update started installing
         /// </summary>
-        public event EventHandler InstallationStarted;
+        public event EventHandler<VersionEventArgs> InstallationStarted;
         /// <summary>
         /// Fires if an update failed installing
         /// </summary>
@@ -179,23 +179,6 @@ namespace GitHubUpdater
         {
             State = UpdaterState.Idle;
 
-            List<string> updateFiles = Directory.GetFiles(updatePath).ToList();
-            updateFiles.ForEach(x => File.Delete(x));
-
-            if (ZipFile.IsZipFile(downloadFilePath) && ZipFile.CheckZip(downloadFilePath))
-            {
-                using (ZipFile zip = new ZipFile(downloadFilePath))
-                    zip.ExtractAll(updatePath, ExtractExistingFileAction.OverwriteSilently);
-
-                if (File.Exists(downloadFilePath))
-                    File.Delete(downloadFilePath);
-            }
-            else
-            {
-                string newFilePath = $@"{updatePath}\{Path.GetFileName(downloadFilePath)}";
-                File.Move(downloadFilePath, newFilePath);
-            }
-
             File.WriteAllText(changelogFilePath, changelog);
             File.WriteAllText(versionFilePath, latestRelease.TagName.Replace("v", ""));
             DownloadingCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, changelog));
@@ -300,12 +283,28 @@ namespace GitHubUpdater
         /// </summary>
         public void InstallUpdate()
         {
-            int updateFiles = Directory.GetFiles(updatePath).Length;
-            if (updateFiles == 0)
-                throw new FileNotFoundException("There isn't any downloaded update");
+            if (string.IsNullOrEmpty(downloadFilePath) || !File.Exists(downloadFilePath))
+                throw new InvalidOperationException("There isn't any downloaded update");
 
             State = UpdaterState.Installing;
-            InstallationStarted?.Invoke(this, EventArgs.Empty);
+            InstallationStarted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, changelog));
+
+            List<string> updateFiles = Directory.GetFiles(updatePath).ToList();
+            updateFiles.ForEach(x => File.Delete(x));
+
+            if (ZipFile.IsZipFile(downloadFilePath) && ZipFile.CheckZip(downloadFilePath))
+            {
+                using (ZipFile zip = new ZipFile(downloadFilePath))
+                    zip.ExtractAll(updatePath, ExtractExistingFileAction.OverwriteSilently);
+
+                if (File.Exists(downloadFilePath))
+                    File.Delete(downloadFilePath);
+            }
+            else
+            {
+                string newFilePath = $@"{updatePath}\{Path.GetFileName(downloadFilePath)}";
+                File.Move(downloadFilePath, newFilePath);
+            }
 
             try
             {
