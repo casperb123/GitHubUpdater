@@ -61,7 +61,8 @@ namespace GitHubUpdater.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to taskkill /f /im %1
+        ///   Looks up a localized string similar to @echo off
+        ///taskkill /f /im %1
         ///cd %2
         ///
         ///timeout 1 &gt; NUL
