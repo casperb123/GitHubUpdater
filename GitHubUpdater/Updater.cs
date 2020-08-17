@@ -313,7 +313,7 @@ namespace GitHubUpdater
                     StartInfo =
                     {
                         FileName = batFilePath,
-                        Arguments = $"{Process.GetCurrentProcess().ProcessName}.exe \"{updatePath}\" \"{Path.GetDirectoryName(originalFilePath)}\" \"{originalFilePath}\"",
+                        Arguments = $"{Process.GetCurrentProcess().Id} \"{updatePath}\" \"{Path.GetDirectoryName(originalFilePath)}\" \"{originalFilePath}\"",
                         CreateNoWindow = true
                     }
                 };

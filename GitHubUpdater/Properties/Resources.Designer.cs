@@ -62,9 +62,17 @@ namespace GitHubUpdater.Properties {
         
         /// <summary>
         ///   Looks up a localized string similar to @echo off
-        ///taskkill /f /im %1
-        ///cd %2
         ///
+        ///SET &quot;var=&quot;&amp;for /f &quot;delims=0123456789&quot; %%i in (&quot;%1&quot;) do set var=%%i
+        ///
+        ///if defined var (
+        ///    taskkill /f /im &quot;%1.exe&quot;
+        ///)
+        ///else (
+        ///    taskkill /f /pid %1
+        ///)
+        ///
+        ///cd %2
         ///timeout 1 &gt; NUL
         ///
         ///for %%f in (*) do (
