@@ -181,6 +181,24 @@ namespace GitHubUpdater
 
             File.WriteAllText(changelogFilePath, changelog);
             File.WriteAllText(versionFilePath, latestRelease.TagName.Replace("v", ""));
+
+            List<string> updateFiles = Directory.GetFiles(updatePath).ToList();
+            updateFiles.ForEach(x => File.Delete(x));
+
+            if (ZipFile.IsZipFile(downloadFilePath) && ZipFile.CheckZip(downloadFilePath))
+            {
+                using (ZipFile zip = new ZipFile(downloadFilePath))
+                    zip.ExtractAll(updatePath, ExtractExistingFileAction.OverwriteSilently);
+
+                if (File.Exists(downloadFilePath))
+                    File.Delete(downloadFilePath);
+            }
+            else
+            {
+                string newFilePath = $@"{updatePath}\{Path.GetFileName(downloadFilePath)}";
+                File.Move(downloadFilePath, newFilePath);
+            }
+
             DownloadingCompleted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, changelog));
         }
 
@@ -191,9 +209,9 @@ namespace GitHubUpdater
         public async Task<Version> CheckForUpdatesAsync()
         {
             State = UpdaterState.CheckingForUpdates;
-            int updateFiles = Directory.GetFiles(updatePath).Length;
 
-            if (updateFiles > 0 && File.Exists(versionFilePath))
+            int updateFiles = Directory.GetFiles(downloadPath).Length;
+            if (File.Exists(versionFilePath) && updateFiles > 0)
             {
                 string versionTxt = await File.ReadAllTextAsync(versionFilePath);
                 latestVersion = Version.ConvertToVersion(versionTxt);
@@ -242,8 +260,8 @@ namespace GitHubUpdater
         /// <returns>true if an update is downloaded, false otherwise</returns>
         public bool IsUpdateDownloaded()
         {
-            int updateFiles = Directory.GetFiles(updatePath).Length;
-            if (updateFiles > 0)
+            int updateFiles = Directory.GetFiles(downloadPath).Length;
+            if (File.Exists(versionFilePath) && updateFiles > 0)
                 return true;
 
             return false;
@@ -283,28 +301,15 @@ namespace GitHubUpdater
         /// </summary>
         public void InstallUpdate()
         {
-            if (string.IsNullOrEmpty(downloadFilePath) || !File.Exists(downloadFilePath))
-                throw new InvalidOperationException("There isn't any downloaded update");
+            int updateFiles = Directory.GetFiles(downloadPath).Length;
+            if (updateFiles == 0)
+            {
+                InstallationFailed?.Invoke(this, new ExceptionEventArgs<Exception>(new FileNotFoundException("There isn't any downloaded update"), "There isn't any downloaded update"));
+                return;
+            }
 
             State = UpdaterState.Installing;
             InstallationStarted?.Invoke(this, new VersionEventArgs(currentVersion, latestVersion, false, changelog));
-
-            List<string> updateFiles = Directory.GetFiles(updatePath).ToList();
-            updateFiles.ForEach(x => File.Delete(x));
-
-            if (ZipFile.IsZipFile(downloadFilePath) && ZipFile.CheckZip(downloadFilePath))
-            {
-                using (ZipFile zip = new ZipFile(downloadFilePath))
-                    zip.ExtractAll(updatePath, ExtractExistingFileAction.OverwriteSilently);
-
-                if (File.Exists(downloadFilePath))
-                    File.Delete(downloadFilePath);
-            }
-            else
-            {
-                string newFilePath = $@"{updatePath}\{Path.GetFileName(downloadFilePath)}";
-                File.Move(downloadFilePath, newFilePath);
-            }
 
             try
             {
@@ -327,15 +332,6 @@ namespace GitHubUpdater
             }
 
             State = UpdaterState.Idle;
-        }
-
-        /// <summary>
-        /// Restarts the application
-        /// </summary>
-        public void Restart()
-        {
-            Process.Start(originalFilePath);
-            Environment.Exit(0);
         }
 
         /// <summary>
