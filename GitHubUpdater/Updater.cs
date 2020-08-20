@@ -33,6 +33,10 @@ namespace GitHubUpdater
         /// </summary>
         public event EventHandler<VersionEventArgs> DownloadingCompleted;
         /// <summary>
+        /// Fires if downloading an update failed
+        /// </summary>
+        public event EventHandler<ExceptionEventArgs<Exception>> DownloadingFailed;
+        /// <summary>
         /// Fires when an update started installing
         /// </summary>
         public event EventHandler<VersionEventArgs> InstallationStarted;
@@ -273,7 +277,10 @@ namespace GitHubUpdater
         public void DownloadUpdate()
         {
             if (latestRelease is null)
-                throw new NullReferenceException("There isn't any update available");
+            {
+                DownloadingFailed?.Invoke(this, new ExceptionEventArgs<Exception>(new FileNotFoundException("There isn't any update available"), "There isn't any update available"));
+                return;
+            }
 
             if (File.Exists(downloadPath))
                 File.Delete(downloadPath);
@@ -290,9 +297,10 @@ namespace GitHubUpdater
                 updateStartTime = DateTime.Now;
                 webClient.DownloadFileAsync(new Uri(fileUrl), filePath);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw;
+                DownloadingFailed?.Invoke(this, new ExceptionEventArgs<Exception>(e, e.Message));
+                return;
             }
         }
 
