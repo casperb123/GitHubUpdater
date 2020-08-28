@@ -146,6 +146,18 @@ namespace GitHubUpdater
             currentVersion = Version.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString(), true);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the updater
+        /// </summary>
+        /// <param name="gitHubUsername">The GitHub username</param>
+        /// <param name="gitHubRepositoryName">The GitHub repository name</param>
+        /// <param name="token">The GitHub personal access token</param>
+        /// <param name="currentVersion">The current version of the application</param>
+        public Updater(string gitHubUsername, string gitHubRepositoryName, string token, string currentVersion) : this(gitHubUsername, gitHubRepositoryName, token)
+        {
+            this.currentVersion = Version.ConvertToVersion(currentVersion, true);
+        }
+
         private void WebClient_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
         {
             string received = string.Format(CultureInfo.InvariantCulture, "{0:n0} kb", e.BytesReceived / 1000);
