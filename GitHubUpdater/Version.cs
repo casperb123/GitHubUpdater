@@ -120,20 +120,20 @@ namespace GitHubUpdater
             if (second.Major > first.Major)
                 return true;
             else if (second.Minor > first.Minor &&
-                second.Major <= second.Major)
+                second.Major <= first.Major)
             {
                 return true;
             }
             else if (second.Build > first.Build &&
-                second.Major <= second.Major &&
-                second.Minor <= second.Minor)
+                second.Major <= first.Major &&
+                second.Minor <= first.Minor)
             {
                 return true;
             }
             else if (second.Revision > first.Revision &&
-                second.Major <= second.Major &&
-                second.Minor <= second.Minor &&
-                second.Build <= second.Build)
+                second.Major <= first.Major &&
+                second.Minor <= first.Minor &&
+                second.Build <= first.Build)
             {
                 return true;
             }
