@@ -111,12 +111,14 @@ namespace GitHubUpdater
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string mainProjectName = Assembly.GetEntryAssembly().GetName().Name;
             string appDataPath = $@"{appData}\{mainProjectName}";
-            downloadPath = appDataPath;
+            downloadPath = $@"{appDataPath}\Download";
             updatePath = $@"{appDataPath}\Update";
             batFilePath = $@"{appDataPath}\InstallUpdate.bat";
 
             if (!Directory.Exists(appDataPath))
                 Directory.CreateDirectory(appDataPath);
+            if (!Directory.Exists(downloadPath))
+                Directory.CreateDirectory(downloadPath);
             if (!Directory.Exists(updatePath))
                 Directory.CreateDirectory(updatePath);
 
