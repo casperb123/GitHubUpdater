@@ -87,20 +87,20 @@ namespace GitHubUpdater
             if (first.Major > second.Major)
                 return true;
             else if (first.Minor > second.Minor &&
-                first.Major < second.Major)
+                first.Major == second.Major)
             {
                 return true;
             }
             else if (first.Build > second.Build &&
-                first.Major < second.Major &&
-                first.Minor < second.Minor)
+                first.Major == second.Major &&
+                first.Minor == second.Minor)
             {
                 return true;
             }
             else if (first.Revision > second.Revision &&
-                first.Major < second.Major &&
-                first.Minor < second.Minor &&
-                first.Build < second.Build)
+                first.Major == second.Major &&
+                first.Minor == second.Minor &&
+                first.Build == second.Build)
             {
                 return true;
             }
@@ -116,23 +116,23 @@ namespace GitHubUpdater
         /// <returns>true if the first version is older than the second version, false otherwise</returns>
         public static bool operator <(Version first, Version second)
         {
-            if (second.Major > first.Major)
+            if (first.Major < second.Major)
                 return true;
-            else if (second.Minor > first.Minor &&
-                second.Major < first.Major)
+            else if (first.Minor < second.Minor &&
+                second.Major == first.Major)
             {
                 return true;
             }
             else if (second.Build > first.Build &&
-                second.Major < first.Major &&
-                second.Minor < first.Minor)
+                second.Major == first.Major &&
+                second.Minor == first.Minor)
             {
                 return true;
             }
             else if (second.Revision > first.Revision &&
-                second.Major < first.Major &&
-                second.Minor < first.Minor &&
-                second.Build < first.Build)
+                second.Major == first.Major &&
+                second.Minor == first.Minor &&
+                second.Build == first.Build)
             {
                 return true;
             }
