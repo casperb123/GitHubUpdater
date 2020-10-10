@@ -161,8 +161,8 @@ namespace GitHubUpdater
 
         private void WebClient_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
         {
-            string received = string.Format(CultureInfo.InvariantCulture, "{0:n0} kb", e.BytesReceived / 1000);
-            string toReceive = string.Format(CultureInfo.InvariantCulture, "{0:n0} kb", e.TotalBytesToReceive / 1000);
+            string received = string.Format(CultureInfo.InvariantCulture, "{0:n0} kB", e.BytesReceived / 1000);
+            string toReceive = string.Format(CultureInfo.InvariantCulture, "{0:n0} kB", e.TotalBytesToReceive / 1000);
 
             if (e.BytesReceived / 1000000 >= 1)
                 received = string.Format("{0:.#0} MB", Math.Round((decimal)e.BytesReceived / 1000000, 2));
